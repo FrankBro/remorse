@@ -33,6 +33,7 @@ A new browser game. One of you creates a room and shares the link. The other ope
 
 ## Decisions
 - Free hosting with no server code of our own, using peer-to-peer rooms. The tradeoff is that a strict network may block connections, which the fallback covers.
+- A bishop's capture token clears at the end of its owner's next turn, so it cannot capture on that next turn. A token placed this turn is never cleansed the same turn.
 - Reuse `chess.js` and an existing board UI instead of writing chess from scratch. You said libraries are fine.
 
 ## Open questions (defaults used if you don't answer)
@@ -49,23 +50,23 @@ A new browser game. One of you creates a room and shares the link. The other ope
 - A two-window playtest record with exact steps and what I observed.
 - The build output listing.
 
-None of this has been run yet. No results exist.
+Unit tests (16 passing), a two-window playtest with screenshots, and the build listing are registered in Blume. The playtest did not cover the guest moving out of turn, resign, new game or disconnect.
 
 ## Tasks
 ### Plan
-- [~] Review this plan with the person `#plan-review`
+- [x] Review this plan with the person `#plan-review`
 ### Build
-- [ ] Scaffold the Vite and TypeScript app and add `chess.js` `#scaffold`
-- [ ] Guilt-aware rules engine `#rules-engine`
-  - [ ] Guilt tokens and capture block `#tokens`
-  - [ ] Cleansing and bishop self-cleanse `#cleanse`
-  - [ ] Guilt-aware legal moves and game end `#legal-moves`
-- [ ] Board UI with guilt markers and legal-move highlights `#board-ui`
-- [ ] PeerJS rooms: create, share link, join, sync moves, resign, rematch `#rooms`
-- [ ] README with run and free-hosting steps `#readme`
+- [x] Scaffold the Vite and TypeScript app and add `chess.js` `#scaffold`
+- [x] Guilt-aware rules engine `#rules-engine`
+  - [x] Guilt tokens and capture block `#tokens`
+  - [x] Cleansing and bishop self-cleanse `#cleanse`
+  - [x] Guilt-aware legal moves and game end `#legal-moves`
+- [x] Board UI with guilt markers and legal-move highlights `#board-ui`
+- [x] PeerJS rooms: create, share link, join, sync moves, resign, rematch `#rooms`
+- [x] README with run and free-hosting steps `#readme`
 ### Test
-- [ ] Unit tests for the rules engine `#unit-tests`
-- [ ] Two-window playtest `#playtest`
+- [x] Unit tests for the rules engine `#unit-tests`
+- [x] Two-window playtest `#playtest`
 ### Review
 - [ ] Person reviews the playable game `#outcome-review`
 ### Release
