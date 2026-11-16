@@ -2,10 +2,8 @@ import type { Color, PieceSymbol, Square } from 'chess.js';
 import { RemorseGame } from './remorse';
 import { host, join, setNetErrorHandler, type Msg, type Room } from './net';
 
-const GLYPH: Record<string, string> = {
-  wk: '♔', wq: '♕', wr: '♖', wb: '♗', wn: '♘', wp: '♙',
-  bk: '♚', bq: '♛', br: '♜', bb: '♝', bn: '♞', bp: '♟',
-};
+const PIECE_URLS = import.meta.glob('./pieces/*.svg', { eager: true, query: '?url', import: 'default' }) as Record<string, string>;
+const pieceUrl = (color: string, type: string) => PIECE_URLS[`./pieces/${color}${type.toUpperCase()}.svg`];
 const FILES = 'abcdefgh';
 
 const $ = <T extends HTMLElement>(id: string) => document.getElementById(id) as T;
@@ -37,7 +35,12 @@ function render() {
       if (sq === selected) el.classList.add('selected');
       if (targets.has(sq)) el.classList.add('target');
       if (last && (last[0] === sq || last[1] === sq)) el.classList.add('last');
-      if (piece) el.textContent = GLYPH[piece.color + piece.type];
+      if (piece) {
+        const p = document.createElement('span');
+        p.className = 'piece ' + piece.color;
+        p.style.backgroundImage = `url("${pieceUrl(piece.color, piece.type)}")`;
+        el.appendChild(p);
+      }
       if (game.isGuilty(sq)) {
         el.classList.add('guilty');
         el.title = 'Guilty: cannot capture';
@@ -45,6 +48,18 @@ function render() {
         t.className = 'token';
         t.textContent = '⛓';
         el.appendChild(t);
+      }
+      if (c === cols[0]) {
+        const n = document.createElement('i');
+        n.className = 'coord rank';
+        n.textContent = String(8 - r);
+        el.appendChild(n);
+      }
+      if (r === rows[7]) {
+        const n = document.createElement('i');
+        n.className = 'coord file';
+        n.textContent = FILES[c];
+        el.appendChild(n);
       }
       el.onclick = () => onSquare(sq);
       boardEl.appendChild(el);
