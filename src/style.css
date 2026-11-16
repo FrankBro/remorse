@@ -1,0 +1,17 @@
+body { font-family: system-ui, sans-serif; margin: 0; background: #1d1b22; color: #eee; }
+main { max-width: 560px; margin: 0 auto; padding: 16px; }
+h1 { margin: 0 0 8px; }
+button { padding: 8px 14px; border-radius: 6px; border: 0; background: #7c5cff; color: #fff; cursor: pointer; font-size: 15px; }
+input { width: 60%; padding: 6px; }
+#status { min-height: 1.5em; font-weight: 600; }
+#board { display: grid; grid-template-columns: repeat(8, 1fr); width: 100%; aspect-ratio: 1; border: 3px solid #444; user-select: none; }
+.sq { position: relative; display: flex; align-items: center; justify-content: center; font-size: min(8vw, 44px); cursor: pointer; line-height: 1; }
+.sq.light { background: #eed9b6; color: #000; }
+.sq.dark { background: #a9774f; color: #000; }
+.sq.selected { outline: 3px solid #ffd400; outline-offset: -3px; }
+.sq.target::after { content: ''; position: absolute; width: 28%; height: 28%; border-radius: 50%; background: rgba(40, 160, 70, .6); }
+.sq.guilty { box-shadow: inset 0 0 0 4px #d6336c; }
+.sq .token { position: absolute; right: 2px; bottom: 0; font-size: 14px; }
+.sq.last { background-image: linear-gradient(rgba(255,230,0,.35), rgba(255,230,0,.35)); }
+.actions { margin: 10px 0; display: flex; gap: 8px; }
+.rules { font-size: 13px; color: #aaa; }

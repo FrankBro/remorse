@@ -1,0 +1,26 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Remorse Chess</title>
+  <link rel="stylesheet" href="./src/style.css" />
+</head>
+<body>
+  <main>
+    <h1>Remorse Chess</h1>
+    <div id="lobby">
+      <button id="create">Create room</button>
+      <p id="invite" hidden>Share this link with your friend: <input id="link" readonly /> <button id="copy">Copy</button></p>
+    </div>
+    <p id="status">Create a room, or open a friend's link.</p>
+    <div id="board" aria-label="Chess board"></div>
+    <div class="actions">
+      <button id="resign" hidden>Resign</button>
+      <button id="again" hidden>New game</button>
+    </div>
+    <p class="rules">Capturing leaves a guilt token (⛓) on the piece: it cannot capture until a friendly bishop stands directly next to it (up, down, left or right) at the end of your turn. A capturing bishop shakes off its own guilt after one turn.</p>
+  </main>
+  <script type="module" src="./src/main.ts"></script>
+</body>
+</html>
