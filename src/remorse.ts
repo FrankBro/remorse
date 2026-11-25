@@ -1,4 +1,4 @@
-import { Chess, type Color, type Move, type PieceSymbol, type Square } from 'chess.js';
+import { Chess, Move, type Color, type PieceSymbol, type Square } from 'chess.js';
 
 export interface Token {
   /** Placed during the current move; cannot be cleansed in the same turn. */
@@ -69,14 +69,47 @@ export class RemorseGame {
     return [...this.tokens.keys()];
   }
 
+  /** A guilty piece cannot capture, so it does not give check. */
+  private kingAttacked(color: Color): boolean {
+    const king = this.chess.board().flat().find((p) => p && p.type === 'k' && p.color === color);
+    if (!king) return false;
+    const them: Color = color === 'w' ? 'b' : 'w';
+    return this.chess.attackers(king.square, them).some((sq) => !this.tokens.has(sq));
+  }
+
   inCheck(): boolean {
-    return this.chess.inCheck();
+    return this.kingAttacked(this.chess.turn());
+  }
+
+  /**
+   * Internal chess.js moves that are legal under Remorse rules: pseudo-legal moves that leave the
+   * mover's king safe from non-guilty attackers, minus captures by guilty pieces.
+   * Uses chess.js private move generation because the public API only offers standard legality.
+   */
+  private remorseMoves(square?: Square): any[] {
+    const c = this.chess as any;
+    const us = this.chess.turn();
+    const out: any[] = [];
+    for (const im of c._moves({ legal: false, ...(square ? { square } : {}) })) {
+      const from = im.from !== undefined ? this.sq(im.from) : undefined;
+      const isCap = !!im.captured || !!(im.flags & 16); // 16 = en passant
+      if (isCap && from && this.tokens.has(from)) continue;
+      c._makeMove(im);
+      const ok = !this.kingAttacked(us);
+      c._undoMove();
+      if (ok) out.push(im);
+    }
+    return out;
+  }
+
+  private sq(x88: number): Square {
+    return (FILES[x88 & 7] + (8 - (x88 >> 4))) as Square;
   }
 
   /** Legal moves with the guilt rule applied. */
   legalMoves(square?: Square): Move[] {
-    const moves = this.chess.moves({ verbose: true, ...(square ? { square } : {}) }) as Move[];
-    return moves.filter((m) => !(this.isCapture(m) && this.tokens.has(m.from)));
+    const c = this.chess as any;
+    return this.remorseMoves(square).map((im) => new Move(c, im));
   }
 
   private isCapture(m: Move): boolean {
@@ -95,7 +128,13 @@ export class RemorseGame {
     const guilty = this.tokens.get(legal.from);
     this.tokens.delete(legal.from);
 
-    const result = this.chess.move({ from: legal.from, to: legal.to, promotion: legal.promotion });
+    const c = this.chess as any;
+    const internal = this.remorseMoves(legal.from).find(
+      (im) => this.sq(im.to) === legal.to && im.promotion === legal.promotion,
+    );
+    const result = new Move(c, internal);
+    c._makeMove(internal);
+    c._incPositionCount();
 
     // The captured piece's own token (if any) disappears with it.
     if (capture) {
@@ -136,7 +175,7 @@ export class RemorseGame {
 
   status(): Status {
     if (this.legalMoves().length === 0) {
-      return this.chess.inCheck()
+      return this.inCheck()
         ? { over: true, reason: 'checkmate', winner: this.chess.turn() === 'w' ? 'b' : 'w' }
         : { over: true, reason: 'stalemate' };
     }

@@ -14,10 +14,16 @@ export interface Room {
 export let onNetError: (msg: string) => void = () => {};
 export function setNetErrorHandler(f: (msg: string) => void) { onNetError = f; }
 
+/** PeerJS emits transient 'network' errors (signaling socket hiccups) that don't affect an established P2P link. */
+function report(room: Room, type: string) {
+  if (room.conn?.open && (type === 'network' || type === 'server-error' || type === 'socket-error' || type === 'socket-closed')) return;
+  onNetError(`Connection error: ${type}`);
+}
+
 export function host(onId: (id: string) => void, onOpen: () => void, onMsg: (m: Msg) => void, onClose: () => void): Room {
   const peer = new Peer();
   const room: Room = { conn: null, send: (m) => room.conn?.send(m) };
-  peer.on('error', (e) => onNetError(`Connection error: ${e.type}`));
+  peer.on('error', (e) => report(room, e.type));
   peer.on('open', onId);
   peer.on('connection', (c) => {
     if (room.conn) return c.close();
@@ -32,7 +38,7 @@ export function host(onId: (id: string) => void, onOpen: () => void, onMsg: (m: 
 export function join(id: string, onOpen: () => void, onMsg: (m: Msg) => void, onClose: () => void): Room {
   const peer = new Peer();
   const room: Room = { conn: null, send: (m) => room.conn?.send(m) };
-  peer.on('error', (e) => onNetError(`Connection error: ${e.type}`));
+  peer.on('error', (e) => report(room, e.type));
   peer.on('open', () => {
     const c = peer.connect(id, { reliable: true });
     room.conn = c;

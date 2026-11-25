@@ -17,6 +17,28 @@ let selected: Square | null = null;
 let last: [Square, Square] | null = null;
 let message = '';
 let over = false;
+let captured: Record<Color, PieceSymbol[]> = { w: [], b: [] }; // pieces taken BY each color
+const VALUE: Record<string, number> = { q: 9, r: 5, b: 3, n: 3, p: 1 };
+
+function renderTaken() {
+  const mine = me ?? 'w';
+  const theirs: Color = mine === 'w' ? 'b' : 'w';
+  const fill = (el: HTMLElement, by: Color) => {
+    const victim: Color = by === 'w' ? 'b' : 'w';
+    const list = [...captured[by]].sort((a, b) => VALUE[b] - VALUE[a]);
+    el.innerHTML = '';
+    for (const t of list) {
+      const i = document.createElement('span');
+      i.className = 'cap';
+      i.style.backgroundImage = `url("${pieceUrl(victim, t)}")`;
+      el.appendChild(i);
+    }
+    const adv = captured[by].reduce((n, t) => n + VALUE[t], 0) - captured[victim].reduce((n, t) => n + VALUE[t], 0);
+    if (adv > 0) { const a = document.createElement('b'); a.textContent = `+${adv}`; el.appendChild(a); }
+  };
+  fill($('taken-top'), theirs);
+  fill($('taken-bottom'), mine);
+}
 
 function render() {
   const flip = me === 'b';
@@ -65,6 +87,7 @@ function render() {
       boardEl.appendChild(el);
     }
   }
+  renderTaken();
   const st = game.status();
   if (message) statusEl.textContent = message;
   else if (!me) statusEl.textContent = 'Create a room, or open a friend\'s link.';
@@ -76,6 +99,7 @@ function render() {
 }
 
 function onSquare(sq: Square) {
+  if (suppressClick) return;
   if (!me || over || game.turn() !== me) return;
   if (selected) {
     const moves = game.legalMoves(selected).filter((m) => m.to === sq);
@@ -89,9 +113,78 @@ function onSquare(sq: Square) {
   render();
 }
 
+let audio: AudioContext | null = null;
+function unlockAudio() {
+  try {
+    audio ??= new AudioContext();
+    if (audio.state === 'suspended') void audio.resume();
+  } catch { /* no audio */ }
+}
+function beep(capture: boolean) {
+  if (!audio) return;
+  const t = audio.currentTime;
+  const o = audio.createOscillator();
+  const g = audio.createGain();
+  o.type = capture ? 'square' : 'triangle';
+  o.frequency.setValueAtTime(capture ? 220 : 520, t);
+  o.frequency.exponentialRampToValueAtTime(capture ? 110 : 300, t + 0.08);
+  g.gain.setValueAtTime(0.25, t);
+  g.gain.exponentialRampToValueAtTime(0.001, t + 0.12);
+  o.connect(g).connect(audio.destination);
+  o.start(t);
+  o.stop(t + 0.13);
+}
+document.addEventListener('pointerdown', unlockAudio, { capture: true });
+
+// Drag and drop (pointer events: mouse + touch)
+let drag: { from: Square; ghost: HTMLElement; moved: boolean; x: number; y: number } | null = null;
+const squareAt = (x: number, y: number) =>
+  (document.elementFromPoint(x, y)?.closest('.sq') as HTMLElement | null)?.dataset.square as Square | undefined;
+function moveGhost(e: PointerEvent) {
+  if (!drag) return;
+  if (!drag.moved && Math.hypot(e.clientX - drag.x, e.clientY - drag.y) < 4) return;
+  drag.moved = true;
+  const size = boardEl.getBoundingClientRect().width / 8;
+  Object.assign(drag.ghost.style, { display: 'block', width: size + 'px', height: size + 'px', left: e.clientX - size / 2 + 'px', top: e.clientY - size / 2 + 'px' });
+}
+boardEl.addEventListener('pointerdown', (e) => {
+  if (!me || over || game.turn() !== me || e.button !== 0) return;
+  const sq = (e.target as HTMLElement).closest('.sq')?.getAttribute('data-square') as Square | null;
+  const piece = sq && game.board().flat().find((p) => p && p.square === sq);
+  if (!sq || !piece || piece.color !== me || !game.legalMoves(sq).length) return;
+  e.preventDefault();
+  selected = sq;
+  render();
+  const ghost = document.createElement('div');
+  ghost.className = 'ghost';
+  ghost.style.backgroundImage = `url("${pieceUrl(piece.color, piece.type)}")`;
+  ghost.style.display = 'none';
+  document.body.appendChild(ghost);
+  boardEl.querySelector(`[data-square="${sq}"]`)?.classList.add('dragging');
+  drag = { from: sq, ghost, moved: false, x: e.clientX, y: e.clientY };
+});
+window.addEventListener('pointermove', moveGhost);
+window.addEventListener('pointerup', (e) => {
+  if (!drag) return;
+  const { from, ghost, moved } = drag;
+  drag = null;
+  ghost.remove();
+  if (!moved) { boardEl.querySelector('.dragging')?.classList.remove('dragging'); return; }
+  const to = squareAt(e.clientX, e.clientY);
+  const mv = to && game.legalMoves(from).find((m) => m.to === to);
+  if (mv) play({ from, to: to!, promotion: mv.promotion ? 'q' : undefined });
+  else { selected = null; render(); }
+  suppressClick = true;
+  setTimeout(() => (suppressClick = false), 0);
+});
+window.addEventListener('pointercancel', () => { drag?.ghost.remove(); drag = null; selected = null; render(); });
+let suppressClick = false;
+
 function play(m: { from: Square; to: Square; promotion?: string }, remote = false) {
   const res = game.move({ from: m.from, to: m.to, promotion: m.promotion as PieceSymbol | undefined });
   if (!res) return;
+  beep(res.isCapture());
+  if (res.captured) captured[res.color].push(res.captured);
   last = [m.from, m.to];
   selected = null;
   if (!remote) room?.send({ t: 'move', ...m });
@@ -100,6 +193,7 @@ function play(m: { from: Square; to: Square; promotion?: string }, remote = fals
 
 function reset() {
   game = new RemorseGame();
+  captured = { w: [], b: [] };
   selected = null;
   last = null;
   message = '';

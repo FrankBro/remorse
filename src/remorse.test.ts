@@ -135,3 +135,19 @@ describe('AC5 standard chess still works', () => {
     expect(guilty.status()).toEqual({ over: true, reason: 'stalemate' });
   });
 });
+
+describe('guilty pieces do not attack', () => {
+  // White king e1 in check from the black rook a1; black pawn d3 (guilty) covers e2 and c2.
+  it('lets the king step onto a square a guilty pawn attacks', () => {
+    const g = new RemorseGame('6k1/8/8/8/8/3p4/8/r3K3 w - - 0 1', ['d3']);
+    expect(g.legalMoves('e1').map((m) => m.to).sort()).toContain('e2');
+  });
+  it('forbids it when the pawn is not guilty', () => {
+    const g = new RemorseGame('6k1/8/8/8/8/3p4/8/r3K3 w - - 0 1');
+    expect(g.legalMoves('e1').map((m) => m.to)).not.toContain('e2');
+  });
+  it('a guilty piece does not give check', () => {
+    const g = new RemorseGame('6k1/8/8/8/8/8/8/R3K2r w - - 0 1', ['h1']);
+    expect(g.inCheck()).toBe(false);
+  });
+});

@@ -77,3 +77,11 @@ input {
   font-size: 13px; line-height: 1.5; color: var(--muted); padding: 12px 14px;
   border-left: 3px solid var(--guilt); background: var(--card); border-radius: 0 8px 8px 0;
 }
+
+.ghost { position: fixed; z-index: 100; pointer-events: none; background-size: cover; filter: drop-shadow(0 4px 6px rgba(0,0,0,.4)); }
+.sq.dragging .piece { opacity: .3; }
+#board { touch-action: none; }
+
+.taken { display: flex; align-items: center; flex-wrap: wrap; min-height: 28px; margin: 4px 0; }
+.taken .cap { width: 24px; height: 24px; margin-right: -8px; background-size: cover; }
+.taken b { margin-left: 14px; font-size: 13px; opacity: .7; }
